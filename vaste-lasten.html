@@ -33,12 +33,13 @@ ul{list-style:none}
 .dt{font-size:12px;color:var(--dim);margin-top:2px}
 .am{font-size:17px}
 .done .nm,.done .am{text-decoration:line-through;color:var(--dim)}
-.off{opacity:.55}
 .hint{font-size:12px;color:var(--dim)}
 .empty{color:var(--dim);text-align:center;padding:36px 0;font-size:14px}
-form{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+form{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 form h3{grid-column:1/-1;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:500}
-input{font:inherit;font-size:16px;padding:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;width:100%}
+input{font:inherit;font-size:16px;padding:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;width:100%;min-width:0;max-width:100%;display:block;-webkit-appearance:none;appearance:none}
+input[type=date]{min-height:48px;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
 .w{grid-column:1/-1}
 .btn{grid-column:1/-1;font:inherit;font-weight:600;padding:13px;border-radius:8px;border:none;background:var(--ink);color:var(--bg)}
 .sec{background:none;border:1px solid var(--line);color:var(--ink);font-weight:400}
@@ -52,7 +53,7 @@ footer .rm{font-size:32px;font-weight:600;color:var(--due);text-align:right}
 <body>
 <header>
   <div class="nav"><button id="prev" aria-label="Vorige maand">‹</button>
-    <div><div class="mt" id="mt"></div><div class="per" id="per"></div><div class="per" id="per2"></div></div>
+    <div><div class="mt" id="mt"></div><div class="per" id="per"></div></div>
     <button id="next" aria-label="Volgende maand">›</button></div>
   <div class="tl"><span>Totaal</span><b class="num" id="tot"></b></div>
 </header>
@@ -85,22 +86,20 @@ const day=(y,m,d)=>new Date(y,m,Math.min(d,new Date(y,m+1,0).getDate()));
 const t=new Date();let cur={y:t.getFullYear(),m:t.getMonth()+(t.getDate()>=25?1:0)};
 const pdate=x=>{const p=x.split('-');return new Date(+p[0],p[1]-1,+p[2])};
 S.costs.forEach(c=>{if(!c.start)c.start='2000-01-'+String(c.day||1).padStart(2,'0')});
-// Overzicht: 23e vorige maand t/m 27e. Meetellen: 25e vorige maand t/m 24e.
-function occs(c){const s=new Date(cur.y,cur.m-1,23),e=new Date(cur.y,cur.m,27),st=pdate(c.start);
+// Periode: 25e vorige maand t/m 24e van de getoonde maand.
+function occs(c){const s=new Date(cur.y,cur.m-1,25),e=new Date(cur.y,cur.m,24),st=pdate(c.start);
   return [day(cur.y,cur.m-1,st.getDate()),day(cur.y,cur.m,st.getDate())].filter(d=>d>=s&&d<=e&&d>=st)}
 function render(){
-  const s=new Date(cur.y,cur.m-1,23),e=new Date(cur.y,cur.m,27);
+  const s=new Date(cur.y,cur.m-1,25),e=new Date(cur.y,cur.m,24);
   $('mt').textContent=new Date(cur.y,cur.m,1).toLocaleDateString('nl-NL',{month:'long',year:'numeric'});
-  const cs=new Date(cur.y,cur.m-1,25),ce=new Date(cur.y,cur.m,24);
-  $('per').textContent='Overzicht: '+fd(s)+' t/m '+fd(e);
-  $('per2').textContent='Telt mee: '+fd(cs)+' t/m '+fd(ce);
+  $('per').textContent=fd(s)+' t/m '+fd(e);
   const items=[];S.costs.forEach(c=>occs(c).forEach(d=>items.push({c,d})));items.sort((x,y)=>x.d-y.d);
   let total=0,paid=0;const ul=$('list');ul.innerHTML='';
   items.forEach(({c,d})=>{
-    const k=c.id+'|'+iso(d),p=!!S.paid[k],on=d>=cs&&d<=ce;if(on){total+=c.amount;if(p)paid+=c.amount}
-    const li=document.createElement('li');li.className='row'+(p?' done':'')+(on?'':' off');
+    const k=c.id+'|'+iso(d),p=!!S.paid[k];total+=c.amount;if(p)paid+=c.amount;
+    const li=document.createElement('li');li.className='row'+(p?' done':'');
     li.innerHTML='<button class="chk" aria-label="Betaald"></button><div class="mid"><div class="nm"></div><div class="dt"></div></div><div class="am num"></div>';
-    li.querySelector('.nm').textContent=c.name;li.querySelector('.dt').textContent=fd(d,1)+(on?'':(d<cs?' · telt mee in vorige maand':' · telt mee in volgende maand'));
+    li.querySelector('.nm').textContent=c.name;li.querySelector('.dt').textContent=fd(d,1);
     li.querySelector('.am').textContent=eur(c.amount);
     li.querySelector('.chk').onclick=()=>{p?delete S.paid[k]:S.paid[k]=1;save();render()};
     li.querySelector('.mid').onclick=()=>edit(c.id);
